@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+
+# Backend generated files
+backend/src/generated/
+
+# Frontend build
+frontend/dist/
