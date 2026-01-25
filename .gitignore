@@ -9,3 +9,4 @@ backend/src/generated/
 
 # Frontend build
 frontend/dist/
+backend/src/data/todos.db
