@@ -15,7 +15,7 @@ A fullstack todo application built with React, TypeScript, Express, and tsoa.
 - Express
 - TypeScript
 - tsoa
-- JSON file for data storage
+- SQLite database (better-sqlite3)
 
 ## Getting Started
 
@@ -23,10 +23,33 @@ A fullstack todo application built with React, TypeScript, Express, and tsoa.
 ```bash
 cd backend
 npm install
+npm run migrate  # Import existing todos from JSON (first time only)
 npm run dev
 ```
 
 The backend will run on http://localhost:3000
+
+#### Database Configuration
+
+The application uses SQLite for data storage. By default, the database file is created at `backend/src/data/todos.db`. You can customize the location by setting the `DATABASE_PATH` environment variable:
+
+```bash
+DATABASE_PATH=/path/to/custom/todos.db npm run dev
+```
+
+#### Migration from JSON
+
+If you have existing todos in `todos.json`, run the migration script to import them into the SQLite database:
+
+```bash
+npm run migrate
+```
+
+The migration script will:
+- Create the SQLite database if it doesn't exist
+- Import all todos from `todos.json`
+- Skip migration if the database already contains data (to prevent duplicates)
+- Keep the original `todos.json` file as a backup
 
 ### Frontend
 ```bash

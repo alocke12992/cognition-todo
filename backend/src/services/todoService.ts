@@ -1,34 +1,41 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 import { Todo, CreateTodoRequest, UpdateTodoRequest } from '../models/Todo';
+import { getDatabase } from '../db/database';
 
-const DATA_FILE = join(__dirname, '../data/todos.json');
+interface TodoRow {
+  id: string;
+  title: string;
+  description: string;
+  completed: number;
+  created_at: string;
+}
 
 export class TodoService {
-  private readTodos(): Todo[] {
-    try {
-      const data = readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(data);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private writeTodos(todos: Todo[]): void {
-    writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), 'utf-8');
+  private rowToTodo(row: TodoRow): Todo {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      completed: row.completed === 1,
+      createdAt: row.created_at
+    };
   }
 
   public getAllTodos(): Todo[] {
-    return this.readTodos();
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM todos ORDER BY created_at DESC');
+    const rows = stmt.all() as TodoRow[];
+    return rows.map(row => this.rowToTodo(row));
   }
 
   public getTodoById(id: string): Todo | undefined {
-    const todos = this.readTodos();
-    return todos.find(todo => todo.id === id);
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM todos WHERE id = ?');
+    const row = stmt.get(id) as TodoRow | undefined;
+    return row ? this.rowToTodo(row) : undefined;
   }
 
   public createTodo(request: CreateTodoRequest): Todo {
-    const todos = this.readTodos();
+    const db = getDatabase();
     const newTodo: Todo = {
       id: Date.now().toString(),
       title: request.title,
@@ -36,37 +43,39 @@ export class TodoService {
       completed: false,
       createdAt: new Date().toISOString()
     };
-    todos.push(newTodo);
-    this.writeTodos(todos);
+
+    const stmt = db.prepare(`
+      INSERT INTO todos (id, title, description, completed, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(newTodo.id, newTodo.title, newTodo.description, 0, newTodo.createdAt);
+
     return newTodo;
   }
 
   public updateTodo(id: string, request: UpdateTodoRequest): Todo | null {
-    const todos = this.readTodos();
-    const index = todos.findIndex(todo => todo.id === id);
-
-    if (index === -1) {
+    const db = getDatabase();
+    
+    const existingStmt = db.prepare('SELECT * FROM todos WHERE id = ?');
+    const existingRow = existingStmt.get(id) as TodoRow | undefined;
+    
+    if (!existingRow) {
       return null;
     }
 
-    todos[index] = {
-      ...todos[index],
+    const updateStmt = db.prepare('UPDATE todos SET completed = ? WHERE id = ?');
+    updateStmt.run(request.completed ? 1 : 0, id);
+
+    return {
+      ...this.rowToTodo(existingRow),
       completed: request.completed
     };
-
-    this.writeTodos(todos);
-    return todos[index];
   }
 
   public deleteTodo(id: string): boolean {
-    const todos = this.readTodos();
-    const filteredTodos = todos.filter(todo => todo.id !== id);
-
-    if (filteredTodos.length === todos.length) {
-      return false;
-    }
-
-    this.writeTodos(filteredTodos);
-    return true;
+    const db = getDatabase();
+    const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
   }
 }
