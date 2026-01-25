@@ -1,21 +1,34 @@
 import { useState, useEffect } from 'react';
-import { Card, CardBody, CardHeader, Checkbox, Spinner } from '@heroui/react';
+import { Card, CardBody, Checkbox, Spinner, Button } from '@heroui/react';
 import { Todo } from '../types/Todo';
+import { useAuth } from '../contexts/AuthContext';
 
 function Dashboard() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, token, logout } = useAuth();
 
   useEffect(() => {
     fetchTodos();
-  }, []);
+  }, [token]);
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
 
   const fetchTodos = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/todos');
+      const response = await fetch('/api/todos', {
+        headers: getAuthHeaders()
+      });
       if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          return;
+        }
         throw new Error('Failed to fetch todos');
       }
       const data = await response.json();
@@ -31,13 +44,15 @@ function Dashboard() {
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ completed: !completed })
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          return;
+        }
         throw new Error('Failed to update todo');
       }
 
@@ -72,11 +87,16 @@ function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Todo Dashboard</h1>
-        <p className="text-gray-600">
-          {completedCount} of {todos.length} tasks completed
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Todo Dashboard</h1>
+          <p className="text-gray-600">
+            Welcome, {user?.name}! {completedCount} of {todos.length} tasks completed
+          </p>
+        </div>
+        <Button color="danger" variant="flat" onClick={logout}>
+          Logout
+        </Button>
       </div>
 
       <div className="space-y-4">

@@ -1,19 +1,35 @@
-import { Controller, Get, Post, Patch, Delete, Route, Tags, Body, Path, Response, SuccessResponse } from 'tsoa';
+import { Controller, Get, Post, Patch, Delete, Route, Tags, Body, Path, Response, SuccessResponse, Security, Request } from 'tsoa';
 import { Todo, CreateTodoRequest, UpdateTodoRequest } from '../models/Todo';
 import { TodoService } from '../services/todoService';
+import express from 'express';
+
+interface AuthenticatedRequest extends express.Request {
+  user?: { userId: string };
+}
 
 @Route('api/todos')
 @Tags('Todos')
+@Security('jwt')
 export class TodoController extends Controller {
   private todoService = new TodoService();
 
+  private getUserId(request: AuthenticatedRequest): string {
+    const userId = request.user?.userId;
+    if (!userId) {
+      this.setStatus(401);
+      throw new Error('Not authenticated');
+    }
+    return userId;
+  }
+
   /**
-   * Get all todos
+   * Get all todos for the authenticated user
    */
   @Get()
   @SuccessResponse('200', 'Success')
-  public async getAllTodos(): Promise<Todo[]> {
-    return this.todoService.getAllTodos();
+  public async getAllTodos(@Request() request: AuthenticatedRequest): Promise<Todo[]> {
+    const userId = this.getUserId(request);
+    return this.todoService.getAllTodos(userId);
   }
 
   /**
@@ -21,8 +37,9 @@ export class TodoController extends Controller {
    */
   @Get('{id}')
   @Response<void>(404, 'Not Found')
-  public async getTodoById(@Path() id: string): Promise<Todo> {
-    const todo = this.todoService.getTodoById(id);
+  public async getTodoById(@Path() id: string, @Request() request: AuthenticatedRequest): Promise<Todo> {
+    const userId = this.getUserId(request);
+    const todo = this.todoService.getTodoById(id, userId);
     if (!todo) {
       this.setStatus(404);
       throw new Error('Todo not found');
@@ -35,9 +52,10 @@ export class TodoController extends Controller {
    */
   @Post()
   @SuccessResponse('201', 'Created')
-  public async createTodo(@Body() request: CreateTodoRequest): Promise<Todo> {
+  public async createTodo(@Body() body: CreateTodoRequest, @Request() request: AuthenticatedRequest): Promise<Todo> {
+    const userId = this.getUserId(request);
     this.setStatus(201);
-    return this.todoService.createTodo(request);
+    return this.todoService.createTodo(body, userId);
   }
 
   /**
@@ -47,9 +65,11 @@ export class TodoController extends Controller {
   @Response<void>(404, 'Not Found')
   public async updateTodo(
     @Path() id: string,
-    @Body() request: UpdateTodoRequest
+    @Body() body: UpdateTodoRequest,
+    @Request() request: AuthenticatedRequest
   ): Promise<Todo> {
-    const todo = this.todoService.updateTodo(id, request);
+    const userId = this.getUserId(request);
+    const todo = this.todoService.updateTodo(id, body, userId);
     if (!todo) {
       this.setStatus(404);
       throw new Error('Todo not found');
@@ -63,8 +83,9 @@ export class TodoController extends Controller {
   @Delete('{id}')
   @Response<void>(404, 'Not Found')
   @SuccessResponse('204', 'No Content')
-  public async deleteTodo(@Path() id: string): Promise<void> {
-    const deleted = this.todoService.deleteTodo(id);
+  public async deleteTodo(@Path() id: string, @Request() request: AuthenticatedRequest): Promise<void> {
+    const userId = this.getUserId(request);
+    const deleted = this.todoService.deleteTodo(id, userId);
     if (!deleted) {
       this.setStatus(404);
       throw new Error('Todo not found');

@@ -18,32 +18,34 @@ export class TodoService {
     writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), 'utf-8');
   }
 
-  public getAllTodos(): Todo[] {
-    return this.readTodos();
-  }
-
-  public getTodoById(id: string): Todo | undefined {
+  public getAllTodos(userId: string): Todo[] {
     const todos = this.readTodos();
-    return todos.find(todo => todo.id === id);
+    return todos.filter(todo => todo.userId === userId);
   }
 
-  public createTodo(request: CreateTodoRequest): Todo {
+  public getTodoById(id: string, userId: string): Todo | undefined {
+    const todos = this.readTodos();
+    return todos.find(todo => todo.id === id && todo.userId === userId);
+  }
+
+  public createTodo(request: CreateTodoRequest, userId: string): Todo {
     const todos = this.readTodos();
     const newTodo: Todo = {
       id: Date.now().toString(),
       title: request.title,
       description: request.description,
       completed: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userId
     };
     todos.push(newTodo);
     this.writeTodos(todos);
     return newTodo;
   }
 
-  public updateTodo(id: string, request: UpdateTodoRequest): Todo | null {
+  public updateTodo(id: string, request: UpdateTodoRequest, userId: string): Todo | null {
     const todos = this.readTodos();
-    const index = todos.findIndex(todo => todo.id === id);
+    const index = todos.findIndex(todo => todo.id === id && todo.userId === userId);
 
     if (index === -1) {
       return null;
@@ -58,11 +60,12 @@ export class TodoService {
     return todos[index];
   }
 
-  public deleteTodo(id: string): boolean {
+  public deleteTodo(id: string, userId: string): boolean {
     const todos = this.readTodos();
-    const filteredTodos = todos.filter(todo => todo.id !== id);
+    const originalLength = todos.length;
+    const filteredTodos = todos.filter(todo => !(todo.id === id && todo.userId === userId));
 
-    if (filteredTodos.length === todos.length) {
+    if (filteredTodos.length === originalLength) {
       return false;
     }
 
