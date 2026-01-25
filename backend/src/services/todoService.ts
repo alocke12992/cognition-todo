@@ -1,72 +1,86 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { getDatabase } from '../db/database';
 import { Todo, CreateTodoRequest, UpdateTodoRequest } from '../models/Todo';
 
-const DATA_FILE = join(__dirname, '../data/todos.json');
+interface TodoRow {
+  id: string;
+  title: string;
+  description: string;
+  completed: number;
+  created_at: string;
+}
+
+function rowToTodo(row: TodoRow): Todo {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed === 1,
+    createdAt: row.created_at
+  };
+}
 
 export class TodoService {
-  private readTodos(): Todo[] {
-    try {
-      const data = readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(data);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private writeTodos(todos: Todo[]): void {
-    writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), 'utf-8');
-  }
-
   public getAllTodos(): Todo[] {
-    return this.readTodos();
+    const db = getDatabase();
+    const rows = db.prepare('SELECT * FROM todos ORDER BY created_at DESC').all() as TodoRow[];
+    return rows.map(rowToTodo);
   }
 
   public getTodoById(id: string): Todo | undefined {
-    const todos = this.readTodos();
-    return todos.find(todo => todo.id === id);
+    const db = getDatabase();
+    const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(id) as TodoRow | undefined;
+    return row ? rowToTodo(row) : undefined;
   }
 
   public createTodo(request: CreateTodoRequest): Todo {
-    const todos = this.readTodos();
-    const newTodo: Todo = {
-      id: Date.now().toString(),
+    const db = getDatabase();
+    const id = Date.now().toString();
+    const createdAt = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      INSERT INTO todos (id, title, description, completed, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(id, request.title, request.description, 0, createdAt);
+
+    return {
+      id,
       title: request.title,
       description: request.description,
       completed: false,
-      createdAt: new Date().toISOString()
+      createdAt
     };
-    todos.push(newTodo);
-    this.writeTodos(todos);
-    return newTodo;
   }
 
   public updateTodo(id: string, request: UpdateTodoRequest): Todo | null {
-    const todos = this.readTodos();
-    const index = todos.findIndex(todo => todo.id === id);
+    const db = getDatabase();
 
-    if (index === -1) {
+    const existing = this.getTodoById(id);
+    if (!existing) {
       return null;
     }
 
-    todos[index] = {
-      ...todos[index],
+    const stmt = db.prepare('UPDATE todos SET completed = ? WHERE id = ?');
+    stmt.run(request.completed ? 1 : 0, id);
+
+    return {
+      ...existing,
       completed: request.completed
     };
-
-    this.writeTodos(todos);
-    return todos[index];
   }
 
   public deleteTodo(id: string): boolean {
-    const todos = this.readTodos();
-    const filteredTodos = todos.filter(todo => todo.id !== id);
+    const db = getDatabase();
 
-    if (filteredTodos.length === todos.length) {
+    const existing = this.getTodoById(id);
+    if (!existing) {
       return false;
     }
 
-    this.writeTodos(filteredTodos);
+    const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
+    stmt.run(id);
+
     return true;
   }
 }

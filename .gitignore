@@ -9,3 +9,8 @@ backend/src/generated/
 
 # Frontend build
 frontend/dist/
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm
