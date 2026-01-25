@@ -4,6 +4,7 @@ export interface Todo {
   description: string;
   completed: boolean;
   createdAt: string;
+  userId: string;
 }
 
 export interface CreateTodoRequest {
