@@ -64,6 +64,8 @@ async function createGitHubIssues() {
 
       // Add a small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(`❌ [${index + 1}/${issues.length}] Failed: "${issue.title}"`);
       if (error.response) {

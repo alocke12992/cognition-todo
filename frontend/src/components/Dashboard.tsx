@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardBody, CardHeader, Checkbox, Spinner } from '@heroui/react';
+import { Card, CardBody, Checkbox, Spinner } from '@heroui/react';
 import { Todo } from '../types/Todo';
 
 function Dashboard() {

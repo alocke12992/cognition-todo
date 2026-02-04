@@ -10,6 +10,7 @@ export class TodoService {
       const data = readFileSync(DATA_FILE, 'utf-8');
       return JSON.parse(data);
     } catch (error) {
+      console.error('Error', error)
       return [];
     }
   }
