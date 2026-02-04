@@ -2,9 +2,12 @@
   "name": "coginition-todo-root",
   "version": "1.0.0",
   "description": "Root package for scripts and tooling",
+  "type": "module",
   "private": true,
   "scripts": {
-    "create-issues": "ts-node scripts/createIssues.ts"
+    "create-issues": "ts-node scripts/createIssues.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.2",
@@ -12,7 +15,13 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.9"
   }
 }
