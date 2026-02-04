@@ -7,7 +7,8 @@
   "scripts": {
     "create-issues": "ts-node scripts/createIssues.ts",
     "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "test": "npm run test --prefix frontend && npm run test --prefix backend"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.2",
