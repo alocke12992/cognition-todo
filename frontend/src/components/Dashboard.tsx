@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Card, CardBody, Checkbox, Spinner } from '@heroui/react';
+import {
+  Card,
+  CardBody,
+  Checkbox,
+  Spinner,
+  Button,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
+} from '@heroui/react';
 import { Todo } from '../types/Todo';
 
 function Dashboard() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [todoToDelete, setTodoToDelete] = useState<Todo | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTodos();
@@ -45,6 +59,37 @@ function Dashboard() {
       setTodos(todos.map(todo => (todo.id === id ? updatedTodo : todo)));
     } catch (err) {
       console.error('Error updating todo:', err);
+    }
+  };
+
+  const openDeleteModal = (todo: Todo) => {
+    setTodoToDelete(todo);
+    setDeleteError(null);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setTodoToDelete(null);
+    setDeleteError(null);
+  };
+
+  const deleteTodo = async () => {
+    if (!todoToDelete) return;
+
+    try {
+      const response = await fetch(`/api/todos/${todoToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete todo');
+      }
+
+      setTodos(todos.filter(todo => todo.id !== todoToDelete.id));
+      closeDeleteModal();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete todo');
     }
   };
 
@@ -113,6 +158,14 @@ function Dashboard() {
                     })}
                   </p>
                 </div>
+                <Button
+                  color="danger"
+                  variant="light"
+                  size="sm"
+                  onPress={() => openDeleteModal(todo)}
+                >
+                  Delete
+                </Button>
               </div>
             </CardBody>
           </Card>
@@ -126,6 +179,27 @@ function Dashboard() {
           </Card>
         )}
       </div>
+
+      <Modal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onClose={closeDeleteModal}>
+        <ModalContent>
+          <ModalHeader>Confirm Delete</ModalHeader>
+          <ModalBody>
+            <p>Are you sure you want to delete "{todoToDelete?.title}"?</p>
+            <p className="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
+            {deleteError && (
+              <p className="text-red-500 text-sm mt-2">Error: {deleteError}</p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={closeDeleteModal}>
+              Cancel
+            </Button>
+            <Button color="danger" onPress={deleteTodo}>
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
